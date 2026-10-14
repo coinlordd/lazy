@@ -26,6 +26,12 @@ Phase 2 per flow.
   (step 2) always uses sonnet. The grill, the compare, and the drafts run in
   this session, on the session model.
 State the resolved model once at the start, then never again.
+
+**Session model guard.** The judgement runs on the session model. Check it
+(your system prompt names it). Not Fable → stop and ask one question:
+"This session runs on <model>, not Fable. Continue, or stop so you can run
+`/model fable` first?" Wait for the answer. Do this before any other step.
+
 Never check out or change the user's worktree.
 
 ## Style (terminal, review, file)
