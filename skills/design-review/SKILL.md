@@ -44,6 +44,9 @@ author) is tired and has ADHD.
 - One idea per block. Short paragraphs. Short responses.
 - Simplify the language, never the technical content. Keep exact terms,
 `file:line`, and data shapes.
+- Define every repo term on first use, in plain words, in the same sentence.
+  This applies to grill questions too. The user has not read the code yet.
+- Prefer one concrete example with real values over an abstract description.
 - Always English.
 
 ## Criteria, in priority order
