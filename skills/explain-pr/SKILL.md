@@ -26,9 +26,9 @@ Write ASD-STE100 Simplified Technical English, in English.
 - Define every repo term on first use, in plain words, in the same sentence:
   `term (what it means)`. Never use a term before you define it.
 - One concrete example with real values beats an abstract description.
-- Any step-by-step walk through events or a lifecycle is a numbered list.
-  One event per item. Never prose, never a code block.
-- Simplify the words, never the facts. Keep `file:line` and data shapes.
+- Any step-by-step walk through events or a lifecycle uses the trace
+  format below: domain headings with short bullets. Never prose.
+- Simplify the words, never the facts. Keep exact names and data shapes.
 - Before you send: can the reader follow each sentence without opening the
   repo? If not, rewrite it.
 
@@ -49,19 +49,33 @@ A flow is one data path through the system. Split the PR into flows.
 
 ## The trace
 Follow ONE data point (one record, one payment, one message) from where it
-enters the system, hop by hop, across services. No step limit. Each step:
-service · function `file:line` · the data at that point. Stop at the
-mutation that is the bug (❌) or the key new mutation (✅).
+enters the system until the mutation that is the bug (❌) or the key new
+mutation (✅). No limit on the number of domains.
 
-1. api · `createOrder()` `api/orders.ts:42` · `{id: 17, total: 1200, currency: "EUR"}`
-2. queue · `publish()` `lib/queue.ts:10` · same object, as JSON
-3. worker · `charge()` `worker/charge.ts:88` · ❌ sends `total` as euros; the API expects cents
+Group the steps by domain: the service or module the data is in. One bold
+heading per domain, in the order the data visits them. A domain may appear
+more than once. Under it, short bullets:
+- what happens, in plain words, ten words or less
+- the state that matters, as `name = value`
+- the last bullet: the signal to the next domain
+No function names, paths, or `file:line` in the trace. No sentences that
+explain; the values do that. Each bullet is complete on its own: it names
+its subject and its value. The reader must not remember an earlier bullet
+or block to understand it, and must not build a map of what was said.
+
+**api**
+- an order comes in
+- `total = 1200`, `currency = EUR`
+- sends the order to the queue
+
+**worker**
+- the order comes in
+- `total` should be `120000` (cents), is `1200` → ❌ charges 12 EUR
 
 ## Phase 1: what and why
 "The problem", in four short blocks:
 1. The bug or the change, in one sentence.
-2. What happens today: one example with real values, as a numbered list of
-   events.
+2. What happens today: one example with real values, in the trace format.
 3. Why that is wrong: what the user or the business loses.
 4. What the PR changes: one line per flow, plain words. Never the how.
 
@@ -91,6 +105,9 @@ blocks 1–3 only (block 4 would spoil the grill). The trace waits for Phase 2.
 | Mistake | Fix |
 |---|---|
 | Trace describes code in general | Pick one data point and show its value at each step |
+| Function names, paths, or `file:line` in the trace | Drop them. The domain name is enough. |
+| A bullet only makes sense with an earlier one in mind | Name the subject and the value in this bullet |
+| A bullet is a sentence that explains | Cut it to the value or the event, ten words or less |
 | Trace stops at a service boundary | Follow the data into the next service |
 | One trace for a `changed` flow | Before and after, same data point |
 | Phase 1 explains the fix | Move the how to Phase 2 |
