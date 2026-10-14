@@ -1,0 +1,12 @@
+{
+  "name": "lazy",
+  "description": "coinlordd's personal skill set",
+  "owner": { "name": "coinlordd", "url": "https://github.com/coinlordd" },
+  "plugins": [
+    {
+      "name": "lazy",
+      "source": "./",
+      "description": "Skills for a tired senior: let the agent wait, verify, and keep things simple"
+    }
+  ]
+}
