@@ -1,6 +1,6 @@
 {
   "name": "lazy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Skills for a tired senior: let the agent wait, verify, and keep things simple",
   "author": { "name": "coinlordd", "url": "https://github.com/coinlordd" }
 }
