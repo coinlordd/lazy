@@ -5,7 +5,7 @@ description: >
   "design review", "review the design of this PR", "is this PR designed
   well", "architecture review", "does this fit the codebase". Not a bug hunt;
   /code-review does that.
-argument-hint: "[pr-number|pr-url]"
+argument-hint: "[pr-number|pr-url] [model]"
 ---
 # Design Review
 
@@ -18,8 +18,15 @@ Phase 2 per flow.
 
 ## Input
 
-`$ARGUMENTS` is a PR number or URL. Empty → the PR of the current branch
-(`gh pr view --json number`). Never check out or change the user's worktree.
+`/lazy:design-review <pr> <model>`, both optional.
+- pr: a PR number or URL. Empty → the PR of the current branch
+  (`gh pr view --json number`).
+- model: opus (default), sonnet, haiku, fable. Empty or unknown → opus.
+  This is the model for the trace subagents (step 3b). The pattern search
+  (step 2) always uses sonnet. The grill, the compare, and the drafts run in
+  this session, on the session model.
+State the resolved model once at the start, then never again.
+Never check out or change the user's worktree.
 
 ## Style (terminal, review, file)
 
@@ -66,7 +73,8 @@ Out of scope: bugs, compile speed, regression tests, code style.
 1. Run explain-pr Phase 1. Note each flow, its tag, and every `inferred`
  assumption. If explain-pr asks the user for the problem, wait for the
  answer before step 2.
-2. Dispatch one Explore subagent (very thorough) in the background. Ask for
+2. Dispatch one Explore subagent (`model: sonnet`, very thorough) in the
+   background. Ask for
  the existing HTTP clients, cache layers, retry helpers, DB access patterns,
  queue/outbox usage, and idempotency helpers, each with `file:line`.
  Do not wait for it. Only step 4 waits for it.
@@ -84,7 +92,10 @@ Out of scope: bugs, compile speed, regression tests, code style.
    
        The user says "stop" → no more grill questions, for this flow or
        later flows. Run steps 4–7 with the answers that exist.
-   b. Run explain-pr Phase 2 for this flow. Show the trace.
+   b. Dispatch one `general-purpose` subagent with `model: <model>`. Tell it
+      to load `lazy:explain-pr` and return Phase 2 for this flow only: the
+      chapter text with the trace. Give it the PR, the flow, its tag, and
+      the book path. Show the trace. Append the chapter to the book yourself.
    c. Compare the user's answers with the PR, criterion by criterion:
     | Result | Action |
     |---|---|
