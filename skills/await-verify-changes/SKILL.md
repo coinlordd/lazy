@@ -25,18 +25,21 @@ Build it from the PR, from the user's own words only:
 1. the user's CHANGES_REQUESTED review body
 2. the user's later PR comments and review comments
 3. unresolved threads the user started
-Rebuild it before each verify: the Monitor does not report the user's own
+Rebuild it before each verify: the watcher does not report the user's own
 comments. The state file says only which items are already verified. It
 never adds items.
 
 ## Setup (first tick)
 1. Record: PR number, head SHA (`lastSha`), the findings list.
 2. If a review from the user is already requested, verify now (below).
-3. Arm the Monitor from the user's checkout of the repo:
-   `bash <skill dir>/monitor.sh <pr> <scratchpad>/await-pr<pr>/monitor`,
-   `timeout_ms: 1800000`. It polls GitHub every 5 minutes. On expiry,
-   re-arm with the same state dir, only if TaskList shows none running.
-4. Run under /loop dynamic pacing. Fallback heartbeat: ScheduleWakeup 1200–1800s.
+3. Arm the watcher as a background Bash task, from the user's checkout:
+   `AWAIT_VERIFY_ONCE=1 bash <skill dir>/monitor.sh <pr> <scratchpad>/await-pr<pr>/monitor`,
+   `run_in_background: true`, `timeout: 7200000`. It polls GitHub every 5
+   minutes and exits after the first poll with events. Its stdout holds the
+   events. Do not use the Monitor tool: it caps at 30 minutes and costs a
+   turn per expiry. Re-arm with the same state dir after every exit, only if
+   TaskList shows none running.
+4. Run under /loop dynamic pacing. Fallback heartbeat: ScheduleWakeup 3600s.
 5. Write the state file (see below).
 
 ## Events and their reaction
@@ -49,7 +52,7 @@ never adds items.
 | `REVIEW_REQUESTED` | Author says done. Verify all open items at head, then decide. |
 | `CHECKS pass` / `CHECKS fail` | If a decide waits on CI, decide now. Else note it. |
 | `PR_STATE MERGED` / `CLOSED` | Stop the loop. Notify once. |
-| Monitor expiry, or nothing | Re-arm if needed. `ScheduleWakeup noop:true`. Zero visible text. |
+| Watcher timed out, or nothing | Re-arm if needed. `ScheduleWakeup noop:true`. Your whole reply is that call. Zero visible text. |
 
 ## Verify
 1. `git fetch origin pull/<pr>/head <base>`.
@@ -101,6 +104,8 @@ If the project's CLAUDE.md names sensitive areas, that list wins.
 - Match the repo's language and tone rules for GitHub text.
 
 ## Red flags — STOP, message the user
+- A quiet tick with any visible text ("PR unchanged, still watching").
+  That is a silence violation, not an update.
 - "Probably fine, the author says it is fixed"
 - "Only a small extra change, approving anyway"
 - The verifier says UNSURE and you want to upgrade it to FIXED

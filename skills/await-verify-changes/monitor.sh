@@ -4,8 +4,9 @@
 # Run it from a checkout of the PR's repo. <state-dir> keeps what was already
 # seen, so a re-arm continues where the last run stopped. The first run only
 # records a baseline and emits nothing for it.
+# AWAIT_VERIFY_ONCE=1: exit 0 after the first poll that emitted an event.
 set -o pipefail
-pr=$1 dir=$2 interval=${AWAIT_VERIFY_INTERVAL:-300}
+pr=$1 dir=$2 interval=${AWAIT_VERIFY_INTERVAL:-300} once=${AWAIT_VERIFY_ONCE:-0}
 api="repos/{owner}/{repo}"
 mkdir -p "$dir" && touch "$dir/seen"
 me=$(gh api user --jq .login) || exit 1
@@ -33,7 +34,7 @@ checks() {
 }
 
 first=1; [ -s "$dir/sha" ] && first=0
-emit() { [ "$first" = 1 ] || echo "$1"; }
+emit() { [ "$first" = 1 ] && return; echo "$1"; emitted=1; }
 changed() { [ "$(cat "$dir/$1" 2>/dev/null)" != "$2" ] && echo "$2" > "$dir/$1"; }
 
 while true; do
@@ -56,6 +57,7 @@ while true; do
     changed ci "$ci" && case $ci in pass|fail) emit "CHECKS $ci";; esac
 
     first=0
+    [ "$once" = 1 ] && [ "${emitted:-0}" = 1 ] && exit 0
   fi
   sleep "$interval"
 done
