@@ -26,6 +26,8 @@ Write ASD-STE100 Simplified Technical English, in English.
 - Define every repo term on first use, in plain words, in the same sentence:
   `term (what it means)`. Never use a term before you define it.
 - One concrete example with real values beats an abstract description.
+- Any step-by-step walk through events or a lifecycle is a numbered list.
+  One event per item. Never prose, never a code block.
 - Simplify the words, never the facts. Keep `file:line` and data shapes.
 - Before you send: can the reader follow each sentence without opening the
   repo? If not, rewrite it.
@@ -51,16 +53,15 @@ enters the system, hop by hop, across services. No step limit. Each step:
 service · function `file:line` · the data at that point. Stop at the
 mutation that is the bug (❌) or the key new mutation (✅).
 
-```
 1. api · `createOrder()` `api/orders.ts:42` · `{id: 17, total: 1200, currency: "EUR"}`
 2. queue · `publish()` `lib/queue.ts:10` · same object, as JSON
 3. worker · `charge()` `worker/charge.ts:88` · ❌ sends `total` as euros; the API expects cents
-```
 
 ## Phase 1: what and why
 "The problem", in four short blocks:
 1. The bug or the change, in one sentence.
-2. What happens today, as one example with real values.
+2. What happens today: one example with real values, as a numbered list of
+   events.
 3. Why that is wrong: what the user or the business loses.
 4. What the PR changes: one line per flow, plain words. Never the how.
 
