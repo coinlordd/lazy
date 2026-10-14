@@ -21,14 +21,23 @@ and the linked issue if any. For code, fetch the head and the base
 (`git fetch origin pull/<pr>/head`) and read with `git show <ref>:<path>`.
 Never check out or change the user's worktree.
 
-## Style (terminal and file)
-Write ASD-STE100 Simplified Technical English. The reader is tired and has ADHD.
-- Conclusion first. Details after.
+## Style (chat and file)
+Write ASD-STE100 Simplified Technical English. The reader is a senior
+engineer, tired, with ADHD, and has NOT seen this repo. Explain it like
+Feynman: simple words, exact facts.
+- Conclusion first. The first line names the bug or the change in one sentence.
 - Sentences of 20 words or less. Active voice. One word per idea.
-- One idea per block. Short paragraphs. Short responses.
+- One idea per block. Three sentences per paragraph at most.
+- Define every repo term on first use, in plain words, in the same sentence.
+  Example: "a synthetic fill (a fill the client invents to explain a position
+  it cannot match)". No term is used before it is defined.
+- Show one concrete example with real values (one symbol, one amount, one
+  timestamp). Prefer the example over an abstract description.
 - Simplify the language, never the technical content. Keep exact terms,
   `file:line`, and data shapes.
 - Always English.
+- Self-check before you send: can the reader follow every sentence without
+  opening the repo? If not, rewrite that sentence.
 
 ## Step 1: The problem
 Find the problem the PR solves. If the PR does not say it, infer it from the
@@ -66,9 +75,8 @@ Never write it inside the reviewed repo. One flow = one chapter. Structure:
 
 ```
 # PR <number>: <title>
+## The problem              see Phase 1
 ## Contents                 one line per chapter
-## Introduction             what, 2–3 sentences
-## Background               why; what is missing today
 ## Assumptions              one per line, tagged `stated` or `inferred`
 ## Chapter N: <flow> (<tag>)
 ### <subheading>            one-liners; a short paragraph where needed
@@ -76,29 +84,39 @@ Never write it inside the reviewed repo. One flow = one chapter. Structure:
 ```
 
 `stated` = the PR text says it. `inferred` = you guessed it from the code.
+No author, commit SHAs, or branch names. The reader has `gh` for that.
 
 ## Phase 1: what and why
-Write Contents, Introduction, Background, Assumptions, and the chapter titles.
-Each chapter title gets one line: what the flow does and why it changes.
-Never the how. No traces in Phase 1.
+Write "The problem" in four short blocks:
+1. **The bug or the change, in one sentence.**
+2. **What happens today**, as one concrete example with real values.
+3. **Why that is wrong**: what the user or the business loses.
+4. **What the PR changes**: one line per flow, in plain words. Never the how.
+
+Then the Contents: one line per chapter, with its tag.
+Then the Assumptions. Never a trace in Phase 1.
 
 ## Phase 2: the how
 Fill one chapter with its trace (per the tag table). End with the takeaway.
 
 ## Delivery
+The explanation lives in the chat. The file is a copy for later, never
+the primary output. Never say "see the file" for something you did not show.
+
 Standalone: Phase 1, then Phase 2 for each chapter, in order.
-- Terminal, turn 1: the Contents only. The rest of Phase 1 goes to the file.
-- Terminal, next turns: one chapter per turn. Wait for the user between
-  chapters.
+- Chat, turn 1: "The problem", the Contents, and the `inferred` assumptions
+  only (five at most, the ones that matter). `stated` assumptions go to the
+  file only.
+- Chat, next turns: one chapter per turn. Wait for the user between chapters.
 - File: write the full book. Update it after each chapter.
 
-One chapter only → the book collapses. Drop Contents and Introduction from
-the file. Terminal, turn 1: the trace directly.
+One chapter only → the book collapses. Drop the Contents. Chat, turn 1:
+"The problem", then the trace directly.
 
 Inside `lazy:design-review`: run only the phase it asks for, per flow.
-A one-chapter book does not collapse there. Phase 1 shows the problem
-statement for that flow in the terminal, instead of the Contents. The trace
-waits until design-review asks for Phase 2.
+A one-chapter book does not collapse there. Phase 1 shows "The problem" for
+that flow in the chat, without block 4. The trace waits until design-review
+asks for Phase 2.
 
 ## Rules
 - No judgement. No "should", no findings, no advice.
@@ -114,3 +132,7 @@ waits until design-review asks for Phase 2.
 | A trace for a `same behavior` flow | One line: behavior unchanged, and why you are sure |
 | Phase 1 explains the fix | Move the how to Phase 2 |
 | Assumption without a tag | Tag it `stated` or `inferred` |
+| A repo term with no definition ("fill horizon") | Define it in plain words in the same sentence, or use a plain word |
+| Abstract description, no example | Add one example with real values |
+| The content went to the file, the chat got a summary | Put the content in the chat; the file is the copy |
+| More than five assumptions in the chat | Keep the `inferred` ones that matter; the rest go to the file |
