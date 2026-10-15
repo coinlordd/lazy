@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Emits one line per new PR event. Polls GitHub every 5 minutes.
+# Polls GitHub once and emits one line per new PR event, then exits.
 # Usage: bash monitor.sh <pr-number> <state-dir>
 # Run it from a checkout of the PR's repo. <state-dir> keeps what was already
-# seen, so a re-arm continues where the last run stopped. The first run only
-# records a baseline and emits nothing for it.
-# AWAIT_VERIFY_ONCE=1: exit 0 after the first poll that emitted an event.
+# seen, so each run continues where the last one stopped. The first run only
+# records a baseline and emits nothing for it. Exit 1 when GitHub failed.
 set -o pipefail
-pr=$1 dir=$2 interval=${AWAIT_VERIFY_INTERVAL:-300} once=${AWAIT_VERIFY_ONCE:-0}
+pr=$1 dir=$2
 api="repos/{owner}/{repo}"
 mkdir -p "$dir" && touch "$dir/seen"
 me=$(gh api user --jq .login) || exit 1
@@ -34,30 +33,24 @@ checks() {
 }
 
 first=1; [ -s "$dir/sha" ] && first=0
-emit() { [ "$first" = 1 ] && return; echo "$1"; emitted=1; }
+emit() { [ "$first" = 1 ] && return; echo "$1"; }
 changed() { [ "$(cat "$dir/$1" 2>/dev/null)" != "$2" ] && echo "$2" > "$dir/$1"; }
 
-while true; do
-  if j=$(gh api "$api/pulls/$pr") && list=$(items); then
-    st=$(jq -r 'if .state == "open" then "OPEN" elif .merged then "MERGED" else "CLOSED" end' <<<"$j")
-    [ "$st" != OPEN ] && { echo "PR_STATE $st"; exit 0; }
+j=$(gh api "$api/pulls/$pr") && list=$(items) || exit 1
+st=$(jq -r 'if .state == "open" then "OPEN" elif .merged then "MERGED" else "CLOSED" end' <<<"$j")
+[ "$st" != OPEN ] && { echo "PR_STATE $st"; exit 0; }
 
-    sha=$(jq -r .head.sha <<<"$j")
-    changed sha "$sha" && emit "NEW_COMMIT $sha"
+sha=$(jq -r .head.sha <<<"$j")
+changed sha "$sha" && emit "NEW_COMMIT $sha"
 
-    while IFS=$'\t' read -r key ev; do
-      [ -n "$key" ] && ! grep -qxF "$key" "$dir/seen" || continue
-      echo "$key" >> "$dir/seen"; emit "$ev"
-    done <<<"$list"
+while IFS=$'\t' read -r key ev; do
+  [ -n "$key" ] && ! grep -qxF "$key" "$dir/seen" || continue
+  echo "$key" >> "$dir/seen"; emit "$ev"
+done <<<"$list"
 
-    rr=$(jq -r --arg me "$me" 'any(.requested_reviewers[]; .login == $me)' <<<"$j")
-    changed rr "$rr" && [ "$rr" = true ] && emit "REVIEW_REQUESTED"
+rr=$(jq -r --arg me "$me" 'any(.requested_reviewers[]; .login == $me)' <<<"$j")
+changed rr "$rr" && [ "$rr" = true ] && emit "REVIEW_REQUESTED"
 
-    ci=$(checks); ci=${ci:-none}
-    changed ci "$ci" && case $ci in pass|fail) emit "CHECKS $ci";; esac
-
-    first=0
-    [ "$once" = 1 ] && [ "${emitted:-0}" = 1 ] && exit 0
-  fi
-  sleep "$interval"
-done
+ci=$(checks); ci=${ci:-none}
+changed ci "$ci" && case $ci in pass|fail) emit "CHECKS $ci";; esac
+exit 0
