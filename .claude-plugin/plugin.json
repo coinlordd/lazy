@@ -1,6 +1,6 @@
 {
   "name": "lazy",
-  "version": "0.3.7",
-  "description": "Skills for a tired senior: let the agent wait, verify, explain and design-review PRs, and keep things simple",
+  "version": "0.4.0",
+  "description": "Skills for a tired senior: let the agent wait, verify, explain and design-review PRs, scaffold before implementing, and keep things simple",
   "author": { "name": "coinlordd", "url": "https://github.com/coinlordd" }
 }
