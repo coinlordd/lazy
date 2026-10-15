@@ -54,6 +54,7 @@ never adds items.
 | `CHECKS pass` / `CHECKS fail` | If a decide waits on CI, decide now. Else note it. |
 | `PR_STATE MERGED` / `CLOSED` | Send the STOPPED message. Stop the loop. |
 | No output (or exit 1) | `ScheduleWakeup noop:true`. Your whole reply is the poll call and that call. Zero visible text. |
+| Exit 1 three ticks in a row | The checkout or GitHub access is gone. STOPPED message with the last error line. Stop the loop. |
 
 ## Verify
 1. `git fetch origin pull/<pr>/head <base>`.
@@ -110,7 +111,7 @@ prose before it. Then a blank line, then the body. Four messages exist:
    `✅ APPROVED PR #N`
    Body: the verified items, CI state, verifier model+effort.
 4. Stopped:
-   `⏹ STOPPED PR #N: <merged | closed | 48h quiet | your word>`
+   `⏹ STOPPED PR #N: <merged | closed | 48h quiet | poll failed | your word>`
 
 Never send: progress ("checking whether the head changed"), reminders
 ("waiting on your decision", "still watching"), or "nothing new". A
