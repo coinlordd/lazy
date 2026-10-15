@@ -1,16 +1,18 @@
 ---
 name: await-verify-changes
 description: Use when the user asks to wait for, watch, poll, or follow up on a PR they already reviewed, until the author's fixes are verified and the PR is approved or needs the user's call
-arguments: [model, effort]
+arguments: [model, effort, minutes]
 ---
 
 # Await Verify Changes
 
 ## Arguments
-Invoked as `/lazy:await-verify-changes <model> <effort>`, both optional.
-Resolved values for this run: model=`$0`, effort=`$1`.
+Invoked as `/lazy:await-verify-changes <model> <effort> <minutes>`, all
+optional. Resolved values for this run: model=`$0`, effort=`$1`,
+minutes=`$2`.
 - model: opus (default), sonnet, haiku, fable. Empty or unknown → opus.
 - effort: medium, high (default), xhigh. Empty or unknown → high.
+- minutes: poll interval, 1 to 60. Empty or invalid → 20.
 Verifier: `subagent_type: lazy:await-verify-changes-verifier-<effort>`, `model: <model>`.
 State the resolved pair once, in the WATCHING headline, then never again.
 
@@ -37,7 +39,7 @@ never adds items.
    The first run emits nothing. Nothing keeps running between ticks: no
    background task, no detached process, no Monitor tool. Closing the
    session ends the watch.
-4. Run under /loop dynamic pacing: `ScheduleWakeup 1200s`. Each tick is
+4. Run under /loop dynamic pacing: `ScheduleWakeup <minutes>*60 s`. Each tick is
    that same poll command, ONE Bash call. Its stdout holds the events.
    The harness fires an overdue timer as soon as the Mac wakes from sleep,
    so the first tick after the laptop opens polls at once.
@@ -91,7 +93,7 @@ an icon, a status word, the PR, and the point. Under 90 characters. No
 prose before it. Then a blank line, then the body. Four messages exist:
 
 1. First tick only:
-   `👀 WATCHING PR #N: <k> open items · <model>/<effort>`
+   `👀 WATCHING PR #N: <k> open items · <model>/<effort> · every <minutes> min`
    Body: the numbered findings list.
 2. The user must decide:
    `🔴 ACTION PR #N: <the one question>`
