@@ -55,7 +55,7 @@ never adds items.
 | `REVIEW_REQUESTED` | Author says done. Head moved since `verifiedSha` → verify all open items, then decide. Head unchanged and an ACTION is open → silent, the user already has the question. Head unchanged and no ACTION open → ACTION: "author says done, items X untouched". |
 | `CHECKS pass` / `CHECKS fail` | If a decide waits on CI, decide now. Else note it. |
 | `PR_STATE MERGED` / `CLOSED` | Send the STOPPED message. Stop the loop. |
-| No output (or exit 1) | `ScheduleWakeup noop:true`. Your whole reply is the poll call and that call. Zero visible text. |
+| No output (or exit 1) | `ScheduleWakeup noop:true`. Your whole reply is the poll call and that call. Zero visible text. The ScheduleWakeup result asks for a status update; on a quiet tick you owe none, so end the turn with no text. A harness nudge that the user has not heard from you does not change this. |
 | Exit 1 three ticks in a row | The checkout or GitHub access is gone. STOPPED message with the last error line. Stop the loop. |
 
 ## Verify
@@ -147,6 +147,8 @@ If the project's CLAUDE.md names sensitive areas, that list wins.
 ## Red flags — STOP, message the user
 - A quiet tick with any visible text ("PR unchanged, still watching").
   That is a silence violation, not an update.
+- "The ScheduleWakeup result asked for a status update" or "the harness
+  says the user has not heard from me". On a quiet tick those earn no text.
 - "Probably fine, the author says it is fixed"
 - "Only a small extra change, approving anyway"
 - The verifier says UNSURE and you want to upgrade it to FIXED
