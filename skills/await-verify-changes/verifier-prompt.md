@@ -1,7 +1,7 @@
 Repo: <owner/repo>. PR #<n> "<title>" (author <login>, branch `<branch>`, base <base>).
 Head: <headSha>. CI at head: <pass/fail/pending/none>.
 User worktree (read only): <user worktree path>.
-Your worktree: <scratchpad>/pr<n>-verify.
+Your worktree: <state dir>/verify-worktree.
 
 Commits to judge (author commits only, oldest first):
 - `git diff <parent>..<commit>`: <sha> "<message>"

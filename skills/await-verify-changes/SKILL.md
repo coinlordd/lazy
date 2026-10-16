@@ -13,14 +13,17 @@ minutes=`$2`.
 - model: opus (default), sonnet, haiku, fable. Empty or unknown → opus.
 - effort: medium, high (default), xhigh. Empty or unknown → high.
 - minutes: poll interval, 1 to 60. Empty or invalid → 20.
+- `stop` as the first argument: run `bash <skill dir>/watch.sh stop <state dir>`
+  for the PR the user names, say "stopped", done.
 Verifier: `subagent_type: lazy:await-verify-changes-verifier-<effort>`, `model: <model>`.
-State the resolved pair once, in the WATCHING headline, then never again.
 
 ## Overview
-Watch one PR after a review. When the author pushes fixes or re-requests
-review, verify them with the verifier agent. Approve when all is ready.
-Message the user only on approval or when their call is needed.
-Stay silent otherwise.
+Watch one PR after a review. The session only sets the watch up. A launchd
+job polls GitHub every `<minutes>` with no model involved. Only when the
+poll finds an event does it start one headless Claude turn (the "Event
+tick" below) that verifies, decides, and messages the user through a macOS
+notification. Quiet polls produce nothing: no turn, no text, no
+notification.
 
 ## Findings list (the checklist)
 Build it from the PR, from the user's own words only:
@@ -31,21 +34,24 @@ Rebuild it before each verify: the poll does not report the user's own
 comments. The state file says only which items are already verified. It
 never adds items.
 
-## Setup (first tick)
+## Setup (in the session)
 1. Record: PR number, head SHA (`lastSha`), the findings list.
 2. If a review from the user is already requested, verify now (below).
-3. Poll once from the user's checkout to record the baseline:
-   `bash <skill dir>/monitor.sh <pr> <scratchpad>/await-pr<pr>/monitor`.
-   The first run emits nothing. Nothing keeps running between ticks: no
-   background task, no detached process, no Monitor tool. Closing the
-   session ends the watch.
-4. Run under /loop dynamic pacing: `ScheduleWakeup <minutes>*60 s`. Each tick is
-   that same poll command, ONE Bash call. Its stdout holds the events.
-   The harness fires an overdue timer as soon as the Mac wakes from sleep,
-   so the first tick after the laptop opens polls at once.
-5. Write the state file (see below).
+3. From the user's checkout: `bash <skill dir>/watch.sh install <pr> <minutes>`.
+   It records the baseline, installs the launchd job, and prints the state
+   dir. Nothing else keeps running in this session: no loop, no
+   ScheduleWakeup, no Monitor tool. The watch survives closing the session.
+4. Write the state file (see below), including model and effort.
+5. Reply with the WATCHING message. The session is done.
 
-## Events and their reaction
+## Event tick (headless, started by watch.sh)
+The prompt names the state dir and lists the events. Read `state.md`,
+rebuild the findings list, react to each event per the table, then reply
+with one message from the list below or with no text at all. The reply
+is the whole conversation with the user: its first line becomes the
+notification, the full text goes to `log.md`. A reply that starts with
+APPROVED or STOPPED also ends the watch.
+
 | Event | Reaction |
 |---|---|
 | `NEW_COMMIT <sha>` | Verify, then decide. |
@@ -54,9 +60,10 @@ never adds items.
 | `NEW_REVIEW` | By the author: same as a comment. By someone else: note it. |
 | `REVIEW_REQUESTED` | Author says done. Head moved since `verifiedSha` → verify all open items, then decide. Head unchanged and an ACTION is open → silent, the user already has the question. Head unchanged and no ACTION open → ACTION: "author says done, items X untouched". |
 | `CHECKS pass` / `CHECKS fail` | If a decide waits on CI, decide now. Else note it. |
-| `PR_STATE MERGED` / `CLOSED` | Send the STOPPED message. Stop the loop. |
-| No output (or exit 1) | `ScheduleWakeup noop:true`. Your whole reply is the poll call and that call. Zero visible text. The ScheduleWakeup result asks for a status update; on a quiet tick you owe none, so end the turn with no text. A harness nudge that the user has not heard from you does not change this. |
-| Exit 1 three ticks in a row | The checkout or GitHub access is gone. STOPPED message with the last error line. Stop the loop. |
+| `PR_STATE MERGED` / `CLOSED` | Send the STOPPED message. |
+
+watch.sh handles the rest itself: three failed polls in a row and 48h
+without an event both end the watch with a STOPPED notification.
 
 ## Verify
 1. `git fetch origin pull/<pr>/head <base>`.
@@ -67,7 +74,8 @@ never adds items.
    - Else (force-push or rebase) → the range is `<merge-base>..<headSha>`
      against the base, and every open item is in scope.
    - No author commits (only a base merge) → set `lastSha`, stay silent.
-3. Dispatch ONE verifier agent with `verifier-prompt.md`, filled in.
+3. Dispatch ONE verifier agent with `verifier-prompt.md`, filled in. Its
+   worktree goes under the state dir: `<state dir>/verify-worktree`.
    Verdicts hold for the code at `headSha`. The per-commit diffs only show
    where to look: a later commit can undo an earlier fix.
 4. Read the verdict critically. Spot-check one FIXED claim in the diff
@@ -77,24 +85,23 @@ never adds items.
 - **Approve**: every item FIXED, CI `pass` (`gh pr checks`), no new scope,
   no sensitive change → `gh pr review --approve` with a body that names the
   verified items and the verifier model+effort. Resolve only threads the
-  user started. Send the APPROVED message. Stop the loop.
+  user started. Send the APPROVED message. The watch ends.
 - **Ask the user**: any NOT FIXED, UNSURE, new scope, sensitive change, a
   question from the author, or CI `fail` when all else is ready → do NOT
-  approve. Send the ACTION message with ONE question. Keep looping
-  silently.
+  approve. Send the ACTION message with ONE question. The watch goes on;
+  the user answers by acting on the PR or in a normal session.
 - **Silent wait**: CI `pending`; or the commit is clean but open items are
-  untouched and the author has not replied to them → record, no
-  notification, keep looping.
+  untouched and the author has not replied to them → record, reply with
+  no text, the watch goes on.
 
-## Messages (the only visible text in the whole loop)
-The terminal host shows the first line of the final reply as a desktop
-notification, cut at about 90 characters. So line 1 is always a headline:
-an icon, a status word, the PR, and the point. Under 90 characters. No
-prose before it. Then a blank line, then the body. Four messages exist:
+## Messages (the only text a tick may produce)
+Line 1 is the headline: an icon, a status word, the PR, and the point.
+Under 90 characters, because it is the notification title. No prose before
+it. Then a blank line, then the body. Four messages exist:
 
-1. First tick only:
+1. Setup only, in the session:
    `👀 WATCHING PR #N: <k> open items · <model>/<effort> · every <minutes> min`
-   Body: the numbered findings list.
+   Body: the numbered findings list, then the state dir.
 2. The user must decide:
    `🔴 ACTION PR #N: <the one question>`
    Body: the problem in simple numbered steps, so the user can judge
@@ -113,21 +120,18 @@ prose before it. Then a blank line, then the body. Four messages exist:
    `✅ APPROVED PR #N`
    Body: the verified items, CI state, verifier model+effort.
 4. Stopped:
-   `⏹ STOPPED PR #N: <merged | closed | 48h quiet | poll failed | your word>`
+   `⏹ STOPPED PR #N: <merged | closed | your word>`
 
-Never send: progress ("checking whether the head changed"), reminders
-("waiting on your decision", "still watching"), or "nothing new". A
-quiet tick has zero text. One ACTION per open question; send it again
-only with new information, and then say what is new in step 1.
-Also call PushNotification with the headline. It is skipped while the
-user is at the terminal; that is fine, the headline is still there.
+Never send: progress, reminders, or "nothing new". One ACTION per open
+question; send it again only with new information, and then say what is
+new in step 1.
 
 ## State file
-Keep `<scratchpad>/await-pr<pr>/state.md`: `lastSha`, `verifiedSha` (head
-at the last verify), the findings with their status, the open ACTION if
-any, and the time of the last PR event.
-Write it after every tick that changed something. A context compaction
-must not lose the checklist. Do not put this in project memory.
+Keep `<state dir>/state.md`: model, effort, `lastSha`, `verifiedSha`
+(head at the last verify), the findings with their status, the open
+ACTION if any. Each event tick is a fresh process, so this file is the
+only memory. Write it after every tick that changed something. Do not put
+this in project memory.
 
 ## Sensitive change
 A change that is hard to reverse after merge, or that can lose data, money,
@@ -137,18 +141,15 @@ contracts; durable jobs that must stay compatible with in-flight runs.
 If the project's CLAUDE.md names sensitive areas, that list wins.
 
 ## Rules
-- Never stop because ticks are quiet. The default "three quiet ticks → stop"
-  does not apply. Stop only on approval, PR close, the user's word, or 48h
-  after the last PR event (then send the STOPPED message).
+- The watch ends only on approval, PR close, the user's word, three failed
+  polls, or 48h after the last PR event.
 - Do not invoke a code-review skill for this. Diff + findings only.
 - Do not commit, push, or check out anything in the user's worktree.
 - Match the repo's language and tone rules for GitHub text.
 
 ## Red flags — STOP, message the user
-- A quiet tick with any visible text ("PR unchanged, still watching").
-  That is a silence violation, not an update.
-- "The ScheduleWakeup result asked for a status update" or "the harness
-  says the user has not heard from me". On a quiet tick those earn no text.
+- Any text in a silent-wait tick ("PR unchanged, still watching"). Reply
+  with nothing.
 - "Probably fine, the author says it is fixed"
 - "Only a small extra change, approving anyway"
 - The verifier says UNSURE and you want to upgrade it to FIXED
