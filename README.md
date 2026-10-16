@@ -16,28 +16,8 @@ Update: `claude plugin update lazy@lazy`, then `/reload-plugins`.
 
 | Skill | Use it when |
 |---|---|
-| [`/lazy:await-verify-changes [model] [effort] [minutes]`](skills/await-verify-changes/README.md) | You reviewed a PR and want to wait for the author's fixes. See below. |
+| [`/lazy:await-verify-changes [model] [effort] [minutes]`](skills/await-verify-changes/README.md) | You reviewed a PR and want to wait for the author's fixes. |
 | [`/lazy:explain-pr [pr]`](skills/explain-pr/README.md) | You want to understand a PR, not judge it. |
 | [`/lazy:design-review [pr] [model]`](skills/design-review/README.md) | You want an architecture judgement of a PR. Not a bug hunt. |
 | [`/lazy:skeleton-first`](skills/skeleton-first/README.md) | A spec is approved and you want the wiring reviewable before any logic. |
 | [`/lazy:ponytail [lite\|full\|ultra]`](skills/ponytail/README.md) | Any coding task: the smallest change that fully solves it. |
-
-## await-verify-changes
-
-The session only sets the watch up. It records your findings, then runs
-`watch.sh install`, which loads a launchd job. That job runs `monitor.sh`
-every `minutes` (default 20) with no model involved. A quiet poll produces
-nothing: no turn, no text, no notification.
-
-When the poll finds an event (a push, a comment, a review request, CI,
-merge or close), it runs one headless `claude -p` turn. That turn verifies
-the fixes with a verifier agent (`model`/`effort`, default opus/high),
-then approves, asks you one question, or stays silent. Its first line is
-a macOS notification. The full reply goes to `log.md`.
-
-State lives in `~/.claude/reviews/<owner>-<repo>/await-pr<n>/`:
-`state.md`, `log.md`, `launchd.log`, `config`.
-
-The watch ends on approval, PR close, three failed polls, 48h without an
-event, or `/lazy:await-verify-changes stop`. After a plugin update, start
-running watches again: the launchd job points at the installed version.
