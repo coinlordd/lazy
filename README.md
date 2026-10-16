@@ -16,11 +16,11 @@ Update: `claude plugin update lazy@lazy`, then `/reload-plugins`.
 
 | Skill | Use it when |
 |---|---|
-| `/lazy:await-verify-changes [model] [effort] [minutes]` | You reviewed a PR and want to wait for the author's fixes. See below. |
-| `/lazy:explain-pr [pr]` | You want to understand a PR, not judge it. |
-| `/lazy:design-review [pr] [model]` | You want an architecture judgement of a PR. Not a bug hunt. |
-| `/lazy:skeleton-first` | A spec is approved and you want the wiring reviewable before any logic. |
-| `/lazy:ponytail [lite\|full\|ultra]` | Any coding task: the smallest change that fully solves it. |
+| [`/lazy:await-verify-changes [model] [effort] [minutes]`](skills/await-verify-changes/README.md) | You reviewed a PR and want to wait for the author's fixes. See below. |
+| [`/lazy:explain-pr [pr]`](skills/explain-pr/README.md) | You want to understand a PR, not judge it. |
+| [`/lazy:design-review [pr] [model]`](skills/design-review/README.md) | You want an architecture judgement of a PR. Not a bug hunt. |
+| [`/lazy:skeleton-first`](skills/skeleton-first/README.md) | A spec is approved and you want the wiring reviewable before any logic. |
+| [`/lazy:ponytail [lite\|full\|ultra]`](skills/ponytail/README.md) | Any coding task: the smallest change that fully solves it. |
 
 ## await-verify-changes
 
