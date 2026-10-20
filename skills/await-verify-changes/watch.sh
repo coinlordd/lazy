@@ -10,7 +10,8 @@ set -o pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 cmd=$1
 
-stop() { launchctl bootout "gui/$(id -u)/$label" 2>/dev/null; rm -f "$HOME/Library/LaunchAgents/$label.plist"; }
+# rm first: bootout from inside the poll kills this very process, so nothing after it runs
+stop() { rm -f "$HOME/Library/LaunchAgents/$label.plist"; launchctl bootout "gui/$(id -u)/$label" 2>/dev/null; }
 notify() {  # $1 headline, $2 body
   local t=${1//\"/\\\"} b=${2//\"/\\\"}
   osascript -e "display notification \"$b\" with title \"$t\"" >/dev/null 2>&1

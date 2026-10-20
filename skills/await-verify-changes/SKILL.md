@@ -23,7 +23,8 @@ job polls GitHub every `<minutes>` with no model involved. Only when the
 poll finds an event does it start one headless Claude turn (the "Event
 tick" below) that verifies, decides, and messages the user through a macOS
 notification. Quiet polls produce nothing: no turn, no text, no
-notification.
+notification. The session that set the watch up also relays each tick's
+reply into its own chat (the "Relay" below), as long as it stays open.
 
 ## Findings list (the checklist)
 Build it from the PR, from the user's own words only:
@@ -39,10 +40,25 @@ never adds items.
 2. If a review from the user is already requested, verify now (below).
 3. From the user's checkout: `bash <skill dir>/watch.sh install <pr> <minutes>`.
    It records the baseline, installs the launchd job, and prints the state
-   dir. Nothing else keeps running in this session: no loop, no
-   ScheduleWakeup, no Monitor tool. The watch survives closing the session.
+   dir. No loop, no ScheduleWakeup, no Monitor tool in this session. The
+   watch survives closing the session.
 4. Write the state file (see below), including model and effort.
-5. Reply with the WATCHING message. The session is done.
+5. Arm the relay (below), so the tick's reply also lands in this chat.
+6. Reply with the WATCHING message. The session is done until the relay
+   fires.
+
+## Relay (in the session)
+The launchd tick cannot write into the chat. The session waits for it:
+`bash <skill dir>/relay.sh <state dir> <lines in log.md now>` through Bash
+with `run_in_background` and `timeout` 7200000. It prints nothing until
+`log.md` gains a headline line (🔴 ✅ ⏹) past the given line, then prints
+that entry and exits.
+- It fired → post the printed entry in the chat as is, headline first. After
+  🔴 ACTION, arm it again from the new line count. After ✅ or ⏹, do not.
+- It timed out with no event → arm it again from the same line, with no
+  text in the chat. A quiet wait is silent.
+- It printed `⏹ WATCH GONE` → the launchd job is gone without a reply in
+  `log.md` (stopped by hand, or a poll crash). Tell the user in one line.
 
 ## Event tick (headless, started by watch.sh)
 The prompt names the state dir and lists the events. Read `state.md`,
