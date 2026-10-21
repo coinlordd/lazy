@@ -20,8 +20,16 @@ Defaults: opus, high, 20. Run it from a checkout of the PR's repo.
 3. On an event (push, comment, review request, CI, merge, close) it runs one
    headless `claude -p` turn. That turn verifies with a verifier agent, then
    approves, asks you one question, or stays silent.
-4. The reply's first line is a macOS notification. The full reply goes to
-   `log.md`.
+4. The full reply goes to `log.md`, and the session posts it in the chat.
+   The reply's first line is also a macOS notification, as a fallback for
+   when the session is closed.
+
+## One-time setup per Mac
+The notification comes from `osascript`, which macOS attributes to Script
+Editor. Until macOS has asked once, it drops those notifications silently.
+`watch.sh install` detects this, opens Script Editor with a one-line test
+script, and tells you to press ⌘R and click Allow. The chat relay works
+without this step.
 
 ## Files
 - `watch.sh` — `install`, `poll`, `stop`.

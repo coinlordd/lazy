@@ -21,10 +21,11 @@ Verifier: `subagent_type: lazy:await-verify-changes-verifier-<effort>`, `model: 
 Watch one PR after a review. The session only sets the watch up. A launchd
 job polls GitHub every `<minutes>` with no model involved. Only when the
 poll finds an event does it start one headless Claude turn (the "Event
-tick" below) that verifies, decides, and messages the user through a macOS
-notification. Quiet polls produce nothing: no turn, no text, no
-notification. The session that set the watch up also relays each tick's
-reply into its own chat (the "Relay" below), as long as it stays open.
+tick" below) that verifies, decides, and writes its reply to `log.md`.
+The session that set the watch up relays that reply into its own chat
+(the "Relay" below). The chat is the primary channel; the macOS
+notification is the fallback for when the session is closed. Quiet polls
+produce nothing: no turn, no text, no notification.
 
 ## Findings list (the checklist)
 Build it from the PR, from the user's own words only:
@@ -41,9 +42,11 @@ never adds items.
 3. From the user's checkout: `bash <skill dir>/watch.sh install <pr> <minutes>`.
    It records the baseline, installs the launchd job, and prints the state
    dir. No loop, no ScheduleWakeup, no Monitor tool in this session. The
-   watch survives closing the session.
+   watch survives closing the session. If it prints a `NOTIFICATIONS:` line
+   on stderr, repeat that line to the user in the WATCHING message.
 4. Write the state file (see below), including model and effort.
-5. Arm the relay (below), so the tick's reply also lands in this chat.
+5. Arm the relay (below). Mandatory: without it the tick's reply never
+   reaches this chat.
 6. Reply with the WATCHING message. The session is done until the relay
    fires.
 
@@ -164,6 +167,8 @@ If the project's CLAUDE.md names sensitive areas, that list wins.
 - Match the repo's language and tone rules for GitHub text.
 
 ## Red flags — STOP, message the user
+- Sending the WATCHING message without an armed relay. The user then only
+  gets a notification, which macOS may drop silently.
 - Any text in a silent-wait tick ("PR unchanged, still watching"). Reply
   with nothing.
 - "Probably fine, the author says it is fixed"

@@ -4,8 +4,9 @@
 #   watch.sh poll <state-dir>         one poll; launchd runs this every <minutes>
 #   watch.sh stop <state-dir>         remove the launchd job
 # A quiet poll does nothing. On events it runs one headless Claude turn that
-# follows SKILL.md "Event tick", shows the reply's headline as a macOS
-# notification, and appends the reply to <state-dir>/log.md.
+# follows SKILL.md "Event tick", appends the reply to <state-dir>/log.md (the
+# session's relay.sh picks it up from there), and shows the reply's headline
+# as a macOS notification as a fallback.
 set -o pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 cmd=$1
@@ -43,6 +44,12 @@ if [ "$cmd" = install ]; then
 </dict></plist>
 EOF
   launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/$label.plist" || exit 1
+  # osascript's notifications belong to Script Editor; until macOS has asked once, it drops them silently (exit 0)
+  if ! defaults read com.apple.ncprefs apps 2>/dev/null | grep -q com.apple.ScriptEditor2; then
+    printf 'display notification "Notifications work." with title "lazy watch"\n' > "$dir/notify-test.applescript"
+    open -a "Script Editor" "$dir/notify-test.applescript" 2>/dev/null
+    echo "NOTIFICATIONS: Script Editor is not registered, so macOS drops the watch's notifications. In the Script Editor window that just opened, press ⌘R and click Allow. Once per Mac." >&2
+  fi
   echo "$dir"
   exit 0
 fi
